@@ -1,21 +1,24 @@
 package logger
+
 /**
 将日志打印到文件中
  */
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 // 时间 级别 文件:行号
 //格式化时间:2006-01-02 15:04:05.999
 //定义文件日志所需要字段
 type FileLogger struct {
-	level    int
-	logPath  string
-	logName  string
-	file     *os.File
-	warnFile *os.File
+	level       int
+	logPath     string
+	logName     string
+	file        *os.File
+	warnFile    *os.File
+	LogDataChan chan *LogData
 }
 
 // 文件日志结构体构造方法
@@ -38,11 +41,22 @@ func NewFileLogger(config map[string]string) (log LogInterface, err error) {
 		err = fmt.Errorf("not fund log_level")
 		return
 	}
+	//判断配置中是否存在日志级别
+	logChanSize, ok := config["log_chan_size"]
+	if !ok {
+		logChanSize = "50000"
+	}
+
+	chanSize, err := strconv.Atoi(logChanSize)
+	if err != nil {
+		chanSize = 50000
+	}
 	//组建结构体文件日志对象
 	log = &FileLogger{
-		level:   getLogLevel(logLevel),
-		logPath: logPath,
-		logName: logName,
+		level:       getLogLevel(logLevel),
+		logPath:     logPath,
+		logName:     logName,
+		LogDataChan: make(chan *LogData, chanSize),
 	}
 	//初始化文件对象
 	log.Init()
@@ -69,6 +83,23 @@ func (f *FileLogger) Init() {
 		panic(fmt.Sprintf("open faile %s failed,err:%v", filename, err))
 	}
 	f.warnFile = errfile
+	go f.writeLogBackground()
+}
+
+/**
+后台执行写入日志。
+ */
+func (f *FileLogger) writeLogBackground() {
+	//这个for是阻塞循环，一直循环chan隧道
+	for data := range f.LogDataChan {
+		var file *os.File = f.file
+		if data.WarnAndFatal {
+			file = f.warnFile
+		}
+		fmt.Fprintf(file, "%s %s (%s:%s:%d) %s\n", data.TimeStr, data.LevelStr, data.FileName, data.FuncName, data.LineNo,
+			data.Message)
+	}
+
 }
 
 /**
@@ -88,46 +119,71 @@ func (f *FileLogger) Debug(format string, args ...interface{}) {
 	if f.level > LogLevelDebug {
 		return
 	}
-	//真实打印日志公共方法
-	writeLog(f.file, LogLevelDebug, format, args...)
+	// f.LogDataChan <- logData 将数据扔到队列里。
+	// 通过select进行判断队列是否满了，如果满了就会走default分支；如果没满就将数据添加到chan中
+
+	logData := epollWriteLog(LogLevelDebug, format, args...)
+	select {
+	case f.LogDataChan <- logData:
+	default:
+	}
 }
 
 func (f *FileLogger) Trace(format string, args ...interface{}) {
 	if f.level > LogLevelTrace {
 		return
 	}
-	writeLog(f.file, LogLevelTrace, format, args...)
-
+	logData := epollWriteLog(LogLevelTrace, format, args...)
+	select {
+	case f.LogDataChan <- logData:
+	default:
+	}
 }
 
 func (f *FileLogger) Info(format string, args ...interface{}) {
 	if f.level > LogLevelInfo {
 		return
 	}
-	writeLog(f.file, LogLevelInfo, format, args...)
+	logData := epollWriteLog(LogLevelInfo, format, args...)
+	select {
+	case f.LogDataChan <- logData:
+	default:
+	}
 }
 
 func (f *FileLogger) Warn(format string, args ...interface{}) {
 	if f.level > LogLevelWarn {
 		return
 	}
-	writeLog(f.warnFile, LogLevelWarn, format, args...)
-
+	logData := epollWriteLog(LogLevelWarn, format, args...)
+	select {
+	case f.LogDataChan <- logData:
+	default:
+	}
 }
 
 func (f *FileLogger) Error(format string, args ...interface{}) {
 	if f.level > LogLevelError {
 		return
 	}
-	writeLog(f.warnFile, LogLevelError, format, args...)
+	logData := epollWriteLog(LogLevelError, format, args...)
+	select {
+	case f.LogDataChan <- logData:
+	default:
+	}
 
 }
 func (f *FileLogger) Fatal(format string, args ...interface{}) {
 	if f.level > LogLevelFatal {
 		return
 	}
-	writeLog(f.warnFile, LogLevelFatal, format, args...)
+	logData := epollWriteLog(LogLevelFatal, format, args...)
+	select {
+	case f.LogDataChan <- logData:
+	default:
+	}
 }
+
 //关闭文件对象
 func (f *FileLogger) Close() {
 	f.warnFile.Close()
