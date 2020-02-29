@@ -1,0 +1,2 @@
+2020-02-29 15:31:43.821 DEBUG (file_test.go:logger.TestFileLogger:7) user id[2222] is come from china
+2020-02-29 15:39:04.853 DEBUG (logger_test.go:logger.TestFileLogger:7) user id[2222] is come from china
