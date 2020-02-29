@@ -6,8 +6,8 @@
 package main
 
 import (
-	"github.com/goUtils/logger"
 	"fmt"
+	"github.com/goUtils/logger"
 )
 
 func initLogger(logPath, logName string, level string) (err error) {
@@ -15,8 +15,11 @@ func initLogger(logPath, logName string, level string) (err error) {
 	m["log_path"] = logPath
 	m["log_name"] = logName
 	m["log_level"] = level
+	m["log_split_type"] ="size" //配置大小分隔,默认为每小时切分一次
+	m["log_split_size"] ="104857600" // 配置多大进行切分，默认104857600(10M)
 
-	err = logger.InitLogger("console", m)
+
+	err = logger.InitLogger("file", m)
 	if err != nil {
 		return
 	}
@@ -25,7 +28,11 @@ func initLogger(logPath, logName string, level string) (err error) {
 }
 
 func Run()  {
-	logger.Info("run info data")
+	for {
+		logger.Info("run info data")
+		//time.Sleep(time.Second)
+	}
+
 
 }
 
@@ -36,4 +43,6 @@ func main()  {
 	}
 	Run()
 }
+
+
 ```

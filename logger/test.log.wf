@@ -1,4 +1,0 @@
-2020-02-29 15:31:43.821 WARN (file_test.go:logger.TestFileLogger:8) test warn log
-2020-02-29 15:31:43.821 FATAL (file_test.go:logger.TestFileLogger:9) test tatal log
-2020-02-29 15:39:04.853 WARN (logger_test.go:logger.TestFileLogger:8) test warn log
-2020-02-29 15:39:04.854 FATAL (logger_test.go:logger.TestFileLogger:9) test tatal log

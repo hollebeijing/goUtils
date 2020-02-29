@@ -12,6 +12,14 @@ const (
 	LogLevelFatal
 )
 
+/*
+日志切分常量
+ */
+const (
+	LogSplitTypeHour = iota //按小时切分
+	LogSplitTypeSize        //按大小切分
+)
+
 /**
 获取日志级别字符串
 level:数字级别
