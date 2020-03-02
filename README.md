@@ -46,3 +46,44 @@ func main()  {
 
 
 ```
+
+## 配置文件模块
+### 使用说明
+```$xslt
+package main
+
+import (
+	"fmt"
+	"github.com/goUtils/iniconfig"
+)
+
+type Config struct {
+	ServerConf ServerConfig `ini:"server"`
+	MysqlConf  MysqlConfig  `ini:"mysql"`
+}
+
+type ServerConfig struct {
+	Ip   string `ini:"ip"`
+	Port int    `ini:"port"`
+}
+
+type MysqlConfig struct {
+	Auth     bool   `ini:"auth"`
+	Username string `ini:"username"`
+	Passwd   string `ini:"passwd"`
+	DB       string `ini:"db"`
+	Host     string `ini:"host"`
+	Port     int    `ini:"port"`
+}
+
+func main() {
+	filename := "./config.ini"
+	var conf Config
+	err := iniconfig.UnMarshalFile(filename, &conf)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("config:%#v", conf)
+}
+
+```
